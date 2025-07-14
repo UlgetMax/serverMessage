@@ -1,0 +1,15 @@
+# Обычные каталоги, которые не стоит коммитить
+node_modules/
+dist/
+.env
+.DS_Store
+
+# Кэш и временные файлы
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ОС-специфичное
+Thumbs.db
+ehthumbs.db
