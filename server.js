@@ -8,6 +8,7 @@ const cors = require('cors');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'loveIs';
 const port = process.env.PORT || 3002;
+const isProduction = process.env.NODE_ENV === 'production';
 
 const expressApp = express();
 const server = http.createServer(expressApp);
@@ -26,11 +27,13 @@ expressApp.use(cors({
 expressApp.use(express.json());
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:123456@localhost:5555/message',
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
+  connectionString: isProduction
+    ? process.env.DATABASE_URL
+    : 'postgresql://postgres:123456@localhost:5555/message',
+  ssl: isProduction ? { rejectUnauthorized: false } : false,
 });
+console.log('Database connection:', isProduction ? process.env.DATABASE_URL : 'postgresql://postgres:123456@localhost:5555/message');
 
-// Initialize database tables
 async function initializeDatabase() {
   try {
     await pool.query(`
@@ -66,6 +69,7 @@ async function initializeDatabase() {
     console.log('Database and tables initialized');
   } catch (err) {
     console.error('Database initialization failed:', err.message, err.stack);
+    throw err;
   }
 }
 
@@ -75,6 +79,7 @@ initializeDatabase().then(() => {
   console.error('Error during database initialization:', err.message);
 });
 
+// Middleware для проверки JWT-токена
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
