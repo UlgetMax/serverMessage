@@ -30,6 +30,51 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
 });
 
+// Initialize database tables
+async function initializeDatabase() {
+  try {
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT FROM pg_class WHERE relname = 'users_id_seq' AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')) THEN
+          CREATE SEQUENCE users_id_seq;
+        END IF;
+      END $$;
+
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY DEFAULT nextval('users_id_seq'),
+        username VARCHAR(50) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL
+      );
+
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT FROM pg_class WHERE relname = 'messages_id_seq' AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')) THEN
+          CREATE SEQUENCE messages_id_seq;
+        END IF;
+      END $$;
+
+      CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY DEFAULT nextval('messages_id_seq'),
+        user_id INTEGER REFERENCES users(id),
+        content TEXT NOT NULL,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        recipient_id INTEGER REFERENCES users(id),
+        is_edited BOOLEAN DEFAULT FALSE
+      );
+    `);
+    console.log('Database and tables initialized');
+  } catch (err) {
+    console.error('Database initialization failed:', err.message, err.stack);
+  }
+}
+
+initializeDatabase().then(() => {
+  console.log('Database initialization complete');
+}).catch((err) => {
+  console.error('Error during database initialization:', err.message);
+});
+
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
